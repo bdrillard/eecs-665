@@ -4,23 +4,6 @@
             [clojure.pprint :refer [pprint]])
   (:gen-class))
 
-(def test-nfa
-  {:alpha #{:E :b :a}
-   :total 11
-   :final #{11}
-   :init #{1}
-   :states (into (i/int-map) {1 {:E #{2 5} :b #{} :a #{}}
-                              2 {:E #{} :b #{} :a #{3}}
-                              3 {:E #{} :b #{4} :a #{}}
-                              4 {:E #{8} :b #{} :a #{}}
-                              5 {:E #{} :b #{6} :a #{}}
-                              6 {:E #{} :b #{} :a #{7}}
-                              7 {:E #{8} :b #{} :a #{}}
-                              8 {:E #{11 9} :b #{} :a #{}}
-                              9 {:E #{} :b #{} :a #{10}}
-                              10 {:E #{11 9} :b #{} :a #{}}
-                              11 {:E #{} :b #{} :a #{}}})})
-
 (defn move
   "Returns a set of states reachable from given states on a symbol in an nfa"
   [nfa states sym]
@@ -51,7 +34,7 @@
 
 (defn minimize
   [nfa]
-  (let [mark-states (partial mark-states (:states nfa) (:alpha nfa))
+  (let [mark-states (partial mark-states (:states nfa) (into #{} (:alpha nfa)))
         e-closure (partial e-closure (:states nfa))
         d0 (conj [] (e-closure (:init nfa)))]
     (loop [trans-table [] d-states d0 nodes #{}]
@@ -77,7 +60,7 @@
                 "Initial" (assoc d :init (make-set (last l)))
                 "Final"   (assoc d :final (make-set (last l)))
                 "Total"   (assoc d :total (read-string (last l)))
-                "State"   (assoc d :alpha (into #{} (map keyword (rest l))))
+                "State"   (assoc d :alpha (map keyword (rest l)))
                 (assoc d :states (assoc (:states d) 
                                         (read-string (first l)) 
                                         (zipmap (:alpha d) (map make-set (rest l)))))))
@@ -87,4 +70,4 @@
 (defn -main [& args]
   (let [raw (line-seq (java.io.BufferedReader. *in*))
         nfa (parse (map #(clojure.string/split % #"\s+") raw))]
-    (pprint (minimize nfa))))
+    (pprint (minimize test-nfa))))
