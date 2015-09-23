@@ -12,10 +12,10 @@
 (defn e-closure
   "Returns the epsilon closure on a set of states"
   [nfa states]
-  (let [neighbors (move nfa states :E)]
-    (if (empty? neighbors)
+  (let [neighborhood (union states (move nfa states :E))]
+    (if (= neighborhood states)
       states
-      (union states (e-closure nfa neighbors)))))
+      (e-closure nfa neighborhood))))
 
 (defn mark-states
   [nfa alpha states]
@@ -70,4 +70,4 @@
 (defn -main [& args]
   (let [raw (line-seq (java.io.BufferedReader. *in*))
         nfa (parse (map #(clojure.string/split % #"\s+") raw))]
-    (pprint (minimize test-nfa))))
+    (pprint (minimize nfa))))
