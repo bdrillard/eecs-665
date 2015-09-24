@@ -1,8 +1,16 @@
+;;;; Aleksander Eskilson
+;;;; EECS 665 - Compiler Construction - Fall 2015
+;;;; aeskilson@ku.edu
+;;;; NFA to DFA Converter
 (ns project-1.core
   (:require [clojure.data.int-map :as i]
-            [clojure.set :refer [union]]
-            [clojure.pprint :refer [pprint]])
+            [clojure.pprint :refer [pprint print-table]]
+            [clojure.set :refer [union intersection]])
   (:gen-class))
+
+(defn e-apply
+  [f xs ys]
+  (if (seq ys) (apply f xs ys) xs))
 
 (defn move
   "Returns a set of states reachable from given states on a symbol in an nfa"
@@ -18,6 +26,9 @@
       (e-closure nfa neighborhood))))
 
 (defn mark-states
+  "Returns a length-2 vector where the first element is a state to mark, and the
+  second element is a map where the keys are non-epsilon transition symbols, and
+  the values are sets of states reachable on those symbols"
   [nfa alpha states]
   [states (reduce (fn [t m]
                     (let [sym (first (keys m))
@@ -26,30 +37,25 @@
                         (assoc t sym (union (sym t) move))
                         (into t m))))
                   {}
-                  (for [state states
-                        sym (disj alpha :E)
-                        :let [move (move nfa #{state} sym)]
+                  (for [sym (disj alpha :E)
+                        :let [move (move nfa states sym)]
                         :when (seq move)]
-                    {sym (e-closure nfa move)}))])
+                    {sym [move (e-closure nfa move)]}))])
 
-(defn minimize
+(defn convert
+  "Returns a transition table representing the dfa converted from a given nfa"
   [nfa]
   (let [mark-states (partial mark-states (:states nfa) (into #{} (:alpha nfa)))
         e-closure (partial e-closure (:states nfa))
-        d0 (conj [] (e-closure (:init nfa)))]
+        d0 (conj '() (e-closure (:init nfa)))]
     (loop [trans-table [] d-states d0 nodes #{}]
       (if-let [d (peek d-states)]
         (let [next-move (mark-states d)
-              new-states (filter #(not (contains? nodes %)) 
-                                 (vals (second next-move)))]
-          (if (seq new-states)
-            (recur (conj trans-table next-move)
-                   (apply conj (pop d-states) new-states)
-                   (apply conj nodes new-states))
-            (recur (conj trans-table next-move)
-                   (pop d-states)
-                   nodes)))
-        trans-table))))
+              new-states (filter #(not (contains? nodes %)) (map second (vals (second next-move))))]
+          (recur (conj trans-table next-move)
+                 (e-apply conj (pop d-states) (reverse new-states))
+                 (e-apply conj nodes new-states)))
+          trans-table))))
 
 (defn parse
   "Returns a dictionary representation of the parsed nfa file"
@@ -67,7 +73,33 @@
             {:states (i/int-map)}
             lines)))
 
+(defn pretty-print
+  "Human readable output"
+  [nfa dfa]
+  (let [nfa-final (:final nfa)
+        sets (map first dfa)
+        sets->letters (zipmap sets (map char (range 65 99)))
+        dfa-final (into [] (map #(get sets->letters %) 
+                                (filter #(seq (intersection % nfa-final)) sets)))
+        rdfa (for [move dfa
+                   :let [[s m] move]]
+               (apply merge {:state (get sets->letters s)} 
+                      (map (fn [v] {(first v) (get sets->letters (second (second v)))}) m)))
+        header (concat [:state] (filter #(not= :E %) (:alpha nfa)))]
+    (println (str "E-closure({I0}) = " (ffirst dfa) " = " (get sets->letters (ffirst dfa))))
+    (doseq [move dfa]
+      (println (str "\nMark " (get sets->letters (first move))))
+      (doseq [trans (second move)]
+        (let [k (first trans)
+              [m e] (second trans)]
+          (println (str (first move) " --" (name k) "--> " m))
+          (println (str "E-closure(" m ") = " e " = " (get sets->letters e))))))
+    (println (str "\nInitial State: " (get sets->letters (ffirst dfa))))
+    (println (str "Final States: " dfa-final))
+    (print-table header rdfa)))
+
 (defn -main [& args]
   (let [raw (line-seq (java.io.BufferedReader. *in*))
-        nfa (parse (map #(clojure.string/split % #"\s+") raw))]
-    (pprint (minimize nfa))))
+        nfa (parse (map #(clojure.string/split % #"\s+") raw))
+        dfa (convert nfa)]
+    (pretty-print nfa dfa)))
