@@ -13,7 +13,7 @@
   (if (seq ys) (apply f xs ys) xs))
 
 (defn move
-  "Returns a set of states reachable from given states on a symbol in an nfa"
+  "Returns a set of states reachable from a given set of states on a symbol in the nfa"
   [nfa states sym]
   (reduce (fn [c s] (union c (get-in nfa [s sym]))) #{} states))
 
@@ -99,6 +99,7 @@
     (print-table header rdfa)))
 
 (defn -main [& args]
+  "Main function - executed by Java jar, takes in piped input nfa file, produces printout dfa"
   (let [raw (line-seq (java.io.BufferedReader. *in*))
         nfa (parse (map #(clojure.string/split % #"\s+") raw))
         dfa (convert nfa)]
