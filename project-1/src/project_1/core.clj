@@ -45,17 +45,18 @@
 (defn convert
   "Returns a transition table representing the dfa converted from a given nfa"
   [nfa]
-  (let [mark-states (partial mark-states (:states nfa) (into #{} (:alpha nfa)))
-        e-closure (partial e-closure (:states nfa))
-        d0 (conj '() (e-closure (:init nfa)))]
-    (loop [trans-table [] d-states d0 nodes #{}]
-      (if-let [d (peek d-states)]
-        (let [next-move (mark-states d)
-              new-states (filter #(not (contains? nodes %)) (map second (vals (second next-move))))]
-          (recur (conj trans-table next-move)
-                 (e-apply conj (pop d-states) (reverse new-states))
-                 (e-apply conj nodes new-states)))
-          trans-table))))
+  (distinct 
+    (let [mark-states (partial mark-states (:states nfa) (into #{} (:alpha nfa)))
+          e-closure (partial e-closure (:states nfa))
+          d0 (conj '() (e-closure (:init nfa)))]
+      (loop [trans-table [] d-states d0 nodes #{}]
+        (if-let [d (peek d-states)]
+          (let [next-move (mark-states d)
+                new-states (filter #(not (contains? nodes %)) (map second (vals (second next-move))))]
+            (recur (conj trans-table next-move)
+                   (e-apply conj (pop d-states) (reverse new-states))
+                   (e-apply conj nodes new-states)))
+          trans-table)))))
 
 (defn parse
   "Returns a dictionary representation of the parsed nfa file"
@@ -78,7 +79,7 @@
   [nfa dfa]
   (let [nfa-final (:final nfa)
         sets (map first dfa)
-        sets->letters (zipmap sets (map char (range 65 99)))
+        sets->letters (zipmap sets (map inc (range)))
         dfa-final (into [] (map #(get sets->letters %) 
                                 (filter #(seq (intersection % nfa-final)) sets)))
         rdfa (for [move dfa
