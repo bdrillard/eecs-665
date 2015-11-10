@@ -87,14 +87,14 @@
                (apply merge {:state (get sets->letters s)} 
                       (map (fn [v] {(first v) (get sets->letters (second (second v)))}) m)))
         header (concat [:state] (filter #(not= :E %) (:alpha nfa)))]
-    (println (str "E-closure({I0}) = " (ffirst dfa) " = " (get sets->letters (ffirst dfa))))
+    (println (str "E-closure({I0}) = " (sort (ffirst dfa)) " = " (get sets->letters (ffirst dfa))))
     (doseq [move dfa]
       (println (str "\nMark " (get sets->letters (first move))))
       (doseq [trans (second move)]
         (let [k (first trans)
               [m e] (second trans)]
-          (println (str (first move) " --" (name k) "--> " m))
-          (println (str "E-closure(" m ") = " e " = " (get sets->letters e))))))
+          (println (str (sort (first move)) " --" (name k) "--> " (sort m)))
+          (println (str "E-closure(" (sort m) ") = " (sort e) " = " (get sets->letters e))))))
     (println (str "\nInitial State: " (get sets->letters (ffirst dfa))))
     (println (str "Final States: " dfa-final))
     (print-table header rdfa)))

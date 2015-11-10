@@ -1,0 +1,5 @@
+Initial State: {1}
+Final States: {1}
+Total States: 1
+State a b c d E
+1 {1} {} {1} {1} {1}
